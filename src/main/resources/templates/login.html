@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>System Login</title>
+</head>
+<body style="font-family: Arial, sans-serif; padding: 50px; text-align: center;">
+
+    <h2> Login</h2>
+    <div style="background: #f0f0f0; padding: 20px; border: 1px solid #ccc; display: inline-block; text-align: left;">
+    <label>Username:</label><br>
+        <input type="text" id="username" placeholder="Enter username" style="width: 200px;"><br><br>
+        
+        <label>Password:</label><br>
+        <input type="password" id="password" placeholder="Enter password" style="width: 200px;"><br><br>
+        <button type="button" onclick="submitLogin()">Login & Authorize</button>
+    </div>
+
+	<h2>Register</h2>
+    <div style="background: #eef5ff; padding: 20px; border: 1px solid #bce; display: inline-block; text-align: left;">
+        <label>New Username:</label><br>
+        <input type="text" id="regUsername" style="width: 200px;"><br><br>
+        
+        <label>New Password:</label><br>
+        <input type="password" id="regPassword" style="width: 200px;"><br><br>
+        
+        <button type="button" onclick="submitRegister()">Register Account</button>
+    </div>
+
+    <script>
+   
+    async function submitLogin() {
+        const u = document.getElementById('username').value;
+        const p = document.getElementById('password').value;
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                
+                // 1. Double check that a token actually came back
+                if (!data.token) {
+                    alert("Login succeeded, but the backend forgot to generate a token!");
+                    return;
+                }
+
+                // 2. Save the token locally
+                localStorage.setItem("jwtToken", data.token);
+                
+                // 3. Absolute path redirect to clear any relative path folder tracking bugs
+                window.location.replace(window.location.origin + "/menu?token=" + data.token);
+                
+            } else {
+                const errorText = await response.text();
+                alert("Login failed! Details: " + (errorText || "Please check your credentials."));
+            }
+        } catch (err) {
+            console.error("Network Error:", err);
+            alert("Could not connect to the backend server.");
+        }
+    }
+        
+        async function submitRegister() {
+            const u = document.getElementById('regUsername').value;
+            const p = document.getElementById('regPassword').value;
+
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: u, password: p })
+            });
+
+            const message = await response.text();
+            alert(message);
+            if (response.ok) {
+                // Clear inputs on success
+                document.getElementById('regUsername').value = '';
+                document.getElementById('regPassword').value = '';
+            }
+        }
+        
+        
+    </script>
+</body>
+</html>
