@@ -1,90 +1,57 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <title>System Login</title>
-</head>
-<body style="font-family: Arial, sans-serif; padding: 50px; text-align: center;">
+<body style="font-family: Arial; padding: 30px; text-align: center;">
 
-    <h2> Login</h2>
-    <div style="background: #f0f0f0; padding: 20px; border: 1px solid #ccc; display: inline-block; text-align: left;">
-    <label>Username:</label><br>
-        <input type="text" id="username" placeholder="Enter username" style="width: 200px;"><br><br>
+    <h2 id="title">Login</h2>
+    <div style="background: #f0f0f0; padding: 20px; display: inline-block; text-align: left;">
+        <label>Username:</label><br>
+        <input type="text" id="username" style="width: 200px;"><br><br>
         
         <label>Password:</label><br>
-        <input type="password" id="password" placeholder="Enter password" style="width: 200px;"><br><br>
-        <button type="button" onclick="submitLogin()">Login & Authorize</button>
-    </div>
-
-	<h2>Register</h2>
-    <div style="background: #eef5ff; padding: 20px; border: 1px solid #bce; display: inline-block; text-align: left;">
-        <label>New Username:</label><br>
-        <input type="text" id="regUsername" style="width: 200px;"><br><br>
+        <input type="password" id="password" style="width: 200px;"><br><br>
         
-        <label>New Password:</label><br>
-        <input type="password" id="regPassword" style="width: 200px;"><br><br>
+        <button type="button" id="btn" onclick="submitAuth()">Login & Authorize</button>
+        <br><br>
         
-        <button type="button" onclick="submitRegister()">Register Account</button>
+        <a href="javascript:void(0)" id="toggleLink" onclick="toggleMode()">Switch to Register</a>
     </div>
 
     <script>
-   
-    async function submitLogin() {
-        const u = document.getElementById('username').value;
-        const p = document.getElementById('password').value;
+        let isRegister = false;
 
-        try {
-            const response = await fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: u, password: p })
-            });
+        function toggleMode() {
+            isRegister = !isRegister;
+            document.getElementById('title').innerText = isRegister ? "Register" : "Login";
+            document.getElementById('btn').innerText = isRegister ? "Register Account" : "Login & Authorize";
+            document.getElementById('toggleLink').innerText = isRegister ? "Switch to Login" : "Switch to Register";
+        }
 
-            if (response.ok) {
-                const data = await response.json();
-                
-                // 1. Double check that a token actually came back
-                if (!data.token) {
-                    alert("Login succeeded, but the backend forgot to generate a token!");
-                    return;
+        async function submitAuth() {
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            
+            // Dynamic path picking based on toggle state
+            const path = isRegister ? '/api/auth/register' : '/api/auth/login';
+
+            try {
+                const res = await fetch(path, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: u, password: p })
+                });
+
+                if (!isRegister && res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem("jwtToken", data.token);
+                    window.location.replace("/menu?token=" + data.token);
+                } else {
+                    alert(await res.text() || "Success!");
+                    if (isRegister && res.ok) toggleMode(); // Auto flip back to login view on signup success
                 }
-
-                // 2. Save the token locally
-                localStorage.setItem("jwtToken", data.token);
-                
-                // 3. Absolute path redirect to clear any relative path folder tracking bugs
-                window.location.replace(window.location.origin + "/menu?token=" + data.token);
-                
-            } else {
-                const errorText = await response.text();
-                alert("Login failed! Details: " + (errorText || "Please check your credentials."));
-            }
-        } catch (err) {
-            console.error("Network Error:", err);
-            alert("Could not connect to the backend server.");
-        }
-    }
-        
-        async function submitRegister() {
-            const u = document.getElementById('regUsername').value;
-            const p = document.getElementById('regPassword').value;
-
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: u, password: p })
-            });
-
-            const message = await response.text();
-            alert(message);
-            if (response.ok) {
-                // Clear inputs on success
-                document.getElementById('regUsername').value = '';
-                document.getElementById('regPassword').value = '';
+            } catch (err) {
+                alert("Network error.");
             }
         }
-        
-        
     </script>
 </body>
 </html>
