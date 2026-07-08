@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.model.FoodMenu;
+import com.example.demo.repository.ICategoryRepository;
 import com.example.demo.service.FoodMenuService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -25,12 +26,17 @@ import java.util.List;
 
 public class FoodMenuIController {
 	@Autowired
-    private FoodMenuService service; // Controller calls Service layer directly
-
+    private FoodMenuService service; 
+	@Autowired
+    private ICategoryRepository categoryRepository;
 	@GetMapping
-    public String viewMenuPage(Model model) {
+    public String viewMenuPage(Model model, @RequestParam("token") String token) {
         model.addAttribute("menuItems", service.getAllItems());
-        return "menu"; 
+        model.addAttribute("categories", categoryRepository.findAll());
+        model.addAttribute("token", token);
+        model.addAttribute("item", new FoodMenu()); 
+        model.addAttribute("isEdit", false);
+        return "menu";
     }
 
 //	@PostMapping("/add")
@@ -55,6 +61,37 @@ public class FoodMenuIController {
 
     }
 
+	@PostMapping("update/{id}")
+	public String updateItem(@PathVariable Long id,
+            @ModelAttribute FoodMenu item,
+            @RequestParam("categoryName") String categoryName,
+            @RequestParam("imageFile") MultipartFile imageFile,
+            @RequestParam("token") String token) throws IOException {
+	    service.updateItem(id,item, categoryName, imageFile);
+	    return "redirect:/menu?token=" + token;
+
+    }
+	
+	@GetMapping("/edit/{id}")
+	public String showEditForm(@PathVariable Long id, Model model, @RequestParam("token") String token) {
+	 
+	    FoodMenu existingItem = service.getItemById(id);
+	    
+	    if (existingItem != null) {
+	        model.addAttribute("menuItems", service.getAllItems());
+	        model.addAttribute("categories", categoryRepository.findAll());
+	        model.addAttribute("token", token);
+	        
+	        model.addAttribute("item", existingItem); // Pass the populated item into the form
+	        model.addAttribute("isEdit", true);       // Set the flag to true to trigger edit mode
+	        
+	        return "menu"; // Reuses your single menu.html file!
+	    }
+	    
+	    return "redirect:/menu?token=" + token;
+	}
+	
+	
     @GetMapping("/delete/{id}")
     public String deleteItem(@PathVariable Long id, 
                              @RequestParam("token") String token) { 

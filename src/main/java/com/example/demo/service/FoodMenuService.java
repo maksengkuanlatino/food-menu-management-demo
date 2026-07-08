@@ -21,17 +21,17 @@ public class FoodMenuService {
 	
 	@Autowired
     private ICategoryRepository categoryRepository;
+	
+	@Value("${upload.path}")
+	private String uploadPath;
 
     public List<FoodMenu> getAllItems() {
         return repository.findAll();
     }
 
-    public FoodMenu createItem(FoodMenu item) {
-        return repository.save(item);
+    public FoodMenu getItemById(Long id) {
+        return repository.findById(id).orElse(null);
     }
-
-    @Value("${upload.path}")
-    private String uploadPath;
     
     public void createItem(FoodMenu item, String categoryName, MultipartFile imageFile) throws IOException{
         // Find existing pre-populated category entity or fallback
@@ -39,26 +39,55 @@ public class FoodMenuService {
                 .orElseThrow(() -> new RuntimeException("Category not found!"));
         item.setCategory(category);
         if (imageFile != null && !imageFile.isEmpty()) {
-            // Ensure the directory structure exists
+            
             File uploadDir = new File(uploadPath);
             if (!uploadDir.exists()) {
                 uploadDir.mkdirs();
             }
 
-            // Generate a uniquely secure random filename wrapper string
+          
             String uniqueFilename = UUID.randomUUID().toString() + "_" + imageFile.getOriginalFilename();
             File saveFile = new File(uploadPath + uniqueFilename);
             
-            // Save raw file bytes directly to disk storage
             imageFile.transferTo(saveFile);
-            
-            // Track the filename string inside the PostgreSQL entity map
+  
             item.setImageName(uniqueFilename);
         }
         
         repository.save(item);
     }
-
+    
+    
+    
+    public void updateItem(Long id ,FoodMenu item, String categoryName, MultipartFile imageFile) throws IOException{
+    
+    	FoodMenu existingItem = repository.findById(id).orElse(null);
+    	Category category = categoryRepository.findByName(categoryName)
+                 .orElseThrow(() -> new RuntimeException("Category not found!"));
+      
+    	if (existingItem != null) {
+            existingItem.setName(item.getName());
+            existingItem.setPrice(item.getPrice());
+            existingItem.setDescription(item.getDescription());
+            existingItem.setCategory(category);
+            if (imageFile != null && !imageFile.isEmpty()) {
+        
+            	File uploadDir = new File(uploadPath);
+                if (!uploadDir.exists()) {
+                    uploadDir.mkdirs();
+                }
+                String uniqueFilename = UUID.randomUUID().toString() + "_" + imageFile.getOriginalFilename();
+                File saveFile = new File(uploadPath + uniqueFilename);
+                imageFile.transferTo(saveFile);
+                existingItem.setImageName(uniqueFilename);
+            }
+            
+            repository.save(existingItem);
+        }
+    }
+    
+    
+    
     public void deleteItem(Long id) {
         repository.deleteById(id);
     }
